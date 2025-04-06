@@ -2,8 +2,12 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404,redirect
 from .models import *
 from django.contrib import messages
-from .models import Parent, Student
+from school.models import Notification
 # Create your views here.
+
+def create_notification(user, message):
+    Notification.objects.create(user=user, message=message)
+
 
 def add_student(request):
     if request.method == "POST":
@@ -62,19 +66,24 @@ def add_student(request):
             student_image = student_image,
             parent = parent
         )
-        messages.success(request, "Student added successfully")
-        return redirect("student_list")  
+        create_notification(request.user, f"Added Student: {student.first_name} {student.last_name}")
+        messages.success(request, "Student added Successfully")
+        # return render(request, "student_list")
+
+  
 
     return render(request,"students/add-student.html")
 
 
+
 def student_list(request):
     student_list = Student.objects.select_related('parent').all()
+    unread_notification = request.user.notification_set.filter(is_read=False)
     context = {
-        'student_list': student_list
+        'student_list': student_list,
+        'unread_notification': unread_notification
     }
     return render(request, "students/students.html", context)
-
 
 
 def edit_student(request,slug):
@@ -121,10 +130,11 @@ def edit_student(request,slug):
         student.admission_number = admission_number
         student.section = section
         student.student_image = student_image
-        student.save()        
+        student.save()
+        create_notification(request.user, f"Added Student: {student.first_name} {student.last_name}")
+        
         return redirect("student_list")
     return render(request, "students/edit-student.html",{'student':student, 'parent':parent} )
-
 
 
 def view_student(request, slug):
@@ -134,10 +144,12 @@ def view_student(request, slug):
     }
     return render(request, "students/student-details.html", context)
 
+
 def delete_student(request,slug):
     if request.method == "POST":
         student = get_object_or_404(Student, slug=slug)
         student_name = f"{student.first_name} {student.last_name}"
         student.delete()
+        create_notification(request.user, f"Deleted student: {student_name}")
         return redirect ('student_list')
     return HttpResponseForbidden()
