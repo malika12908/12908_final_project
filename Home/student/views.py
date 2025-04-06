@@ -128,9 +128,9 @@ def edit_student(request,slug):
 
 
 def view_student(request, slug):
-    student = get_object_or_404(Student, slug = slug)
+    student = get_object_or_404(Student, student_id = slug)
     context = {
-        'student' : student
+        'student': student
     }
     return render(request, "students/student-details.html", context)
 
